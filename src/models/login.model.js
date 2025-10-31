@@ -14,7 +14,7 @@ export const LoginModel = {
           u.correo,
           u.contrasenia,
           u.id_rol,
-          r.nombre_rol as rol
+          r.nombre_rol as rol 
         FROM usuarios u
         LEFT JOIN roles r ON u.id_rol = r.id_rol
         WHERE u.correo = $1
@@ -42,10 +42,10 @@ export const LoginModel = {
         [userId]
       );
 
-      // Insertamos el nuevo código con expiración de 10 minutos
+      // Insertamos el nuevo código con expiración de 10 minutos en hora de La Paz
       const query = `
         INSERT INTO codigos_verificacion (id_usuario, codigo, expiracion)
-        VALUES ($1, $2, NOW() + INTERVAL '10 minutes')
+        VALUES ($1, $2, (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'America/La_Paz') + INTERVAL '10 minutes')
       `;
       await client.query(query, [userId, code]);
       
@@ -74,7 +74,7 @@ export const LoginModel = {
         FROM codigos_verificacion 
         WHERE id_usuario = $1 
         AND codigo = $2 
-        AND expiracion > NOW()
+        AND expiracion > (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'America/La_Paz')
         AND usado = false
       `;
       const result = await client.query(query, [usuario.id_usuario, codigo]);
@@ -101,9 +101,64 @@ export const LoginModel = {
     let client;
     try {
       client = await pool.connect();
-      await client.query('DELETE FROM codigos_verificacion WHERE expiracion <= NOW()');
+      const query = `
+        DELETE FROM codigos_verificacion 
+        WHERE expiracion <= (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'America/La_Paz')
+      `;
+      await client.query(query);
     } catch (error) {
       console.error('Error limpiando códigos expirados:', error);
+    } finally {
+      if (client) client.release();
+    }
+  },
+
+  // 🔐 FUNCIONES SIMPLIFICADAS PARA DETECCIÓN DE ACTIVIDAD
+  
+  // Registrar log de inicio de sesión (simplificado)
+  async registrarLogLogin(userId) {
+    let client;
+    try {
+      client = await pool.connect();
+      
+      const query = `
+        INSERT INTO logs (id_usuario, fechahora)
+        VALUES ($1, (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'America/La_Paz'))
+      `;
+      await client.query(query, [userId]);
+      
+    } catch (error) {
+      console.error('❌ ERROR en registrarLogLogin:', error.message);
+    } finally {
+      if (client) client.release();
+    }
+  },
+
+  // Verificar actividad sospechosa (simplificado)
+  async verificarActividadSospechosa(userId) {
+    let client;
+    try {
+      client = await pool.connect();
+      
+      // Consultar intentos de login en los últimos 15 minutos (hora La Paz)
+      const query = `
+        SELECT COUNT(*) as intentos_recientes
+        FROM logs 
+        WHERE id_usuario = $1 
+        AND fechahora >= ((CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'America/La_Paz') - INTERVAL '15 minutes')
+      `;
+      
+      const result = await client.query(query, [userId]);
+      const intentosRecientes = parseInt(result.rows[0].intentos_recientes);
+      
+      return {
+        esSospechoso: intentosRecientes >= 3, // 3 o más intentos en 15 minutos
+        intentosRecientes: intentosRecientes
+      };
+      
+    } catch (error) {
+      console.error('❌ ERROR en verificarActividadSospechosa:', error.message);
+      return { esSospechoso: false, intentosRecientes: 0 };
     } finally {
       if (client) client.release();
     }

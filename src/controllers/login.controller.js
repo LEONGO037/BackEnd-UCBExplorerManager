@@ -3,6 +3,33 @@ import { sendEmail } from '../middlewares/sendEmail.js';
 import { generarToken } from '../middlewares/tokens.js';
 import bcrypt from 'bcrypt';
 
+// 🔐 FUNCIÓN INDEPENDIENTE PARA ALERTAS
+async function enviarAlertaSimple(usuario, actividadSospechosa) {
+  try {
+    const mensajeAlerta = `
+Se detectó actividad inusual en la cuenta:
+
+Usuario: ${usuario.correo}
+Intentos recientes: ${actividadSospechosa.intentosRecientes}
+Hora: ${new Date().toLocaleString('es-BO', { timeZone: 'America/La_Paz' })}
+
+Se recomienda verificar la actividad.
+    `;
+
+    // Enviar alerta al administrador
+    await sendEmail({
+      to: usuario.correo,
+      subject: 'Alerta de actividad inusual',
+      text: mensajeAlerta
+    });
+
+    console.log('📧 Alerta de seguridad enviada');
+
+  } catch (error) {
+    console.error('Error al enviar alerta:', error.message);
+  }
+}
+
 const LoginController = {
   async solicitarLogin(req, res) {
     try {
@@ -10,6 +37,7 @@ const LoginController = {
 
       console.log('Datos recibidos:', req.body);
 
+      // Validación
       if (!correo || !contrasenia) {
         return res.status(400).json({
           success: false,
@@ -17,7 +45,11 @@ const LoginController = {
         });
       }
 
-      const usuario = await LoginModel.findByEmail(correo);
+      // Sanitización básica
+      const correoSaneado = correo.toString().trim().toLowerCase();
+      const contraseniaSaneada = contrasenia.toString();
+
+      const usuario = await LoginModel.findByEmail(correoSaneado);
       
       if (!usuario) {
         return res.status(401).json({
@@ -26,16 +58,31 @@ const LoginController = {
         });
       }
 
-      console.log('Usuario encontrado:', usuario);
+      console.log('Usuario encontrado:', usuario.id_usuario);
 
       // Verificar contraseña
-      const contraseniaValida = await bcrypt.compare(contrasenia, usuario.contrasenia);
+      const contraseniaValida = await bcrypt.compare(contraseniaSaneada, usuario.contrasenia);
       
       if (!contraseniaValida) {
         return res.status(401).json({
           success: false,
           message: 'Credenciales inválidas'
         });
+      }
+
+      // 🔐 PRIMERO REGISTRAR EL LOG ACTUAL
+      await LoginModel.registrarLogLogin(usuario.id_usuario);
+      console.log('📝 Log registrado para usuario:', usuario.id_usuario);
+
+      // 🔐 LUEGO VERIFICAR ACTIVIDAD SOSPECHOSA (INCLUYENDO EL LOG ACTUAL)
+      const actividadSospechosa = await LoginModel.verificarActividadSospechosa(usuario.id_usuario);
+      console.log('🔍 Resultado verificación actividad:', actividadSospechosa);
+      
+      if (actividadSospechosa.esSospechoso) {
+        console.warn(`⚠️ Actividad sospechosa detectada para usuario ${usuario.correo}: ${actividadSospechosa.intentosRecientes} intentos`);
+        
+        // Enviar alerta simple por correo
+        await enviarAlertaSimple(usuario, actividadSospechosa);
       }
 
       // Generar código de verificación
@@ -46,16 +93,17 @@ const LoginController = {
 
       // Enviar código por correo
       await sendEmail({
-        to: correo,
-        subject: 'Código de verificación - Sistema de Gestión',
-        text: `Tu código de verificación es: ${codigoVerificacion}\n\nEste código expirará en 10 minutos.`
+        to: usuario.correo,
+        subject: 'Código de verificación',
+        text: `Tu código de verificación es: ${codigoVerificacion}\n\nExpira en 10 minutos.`
       });
 
       res.json({
         success: true,
-        message: 'Código de verificación enviado al correo',
+        message: 'Código de verificación enviado',
         correo: usuario.correo,
-        requiereVerificacion: true
+        requiereVerificacion: true,
+        intentosRecientes: actividadSospechosa.intentosRecientes // Para debug
       });
 
     } catch (error) {
@@ -78,8 +126,12 @@ const LoginController = {
         });
       }
 
-      // Validar código usando el correo
-      const codigoValido = await LoginModel.validateVerificationCodeByEmail(correo, codigo);
+      // Sanitización
+      const correoSaneado = correo.toString().trim().toLowerCase();
+      const codigoSaneado = codigo.toString().trim();
+
+      // Validar código
+      const codigoValido = await LoginModel.validateVerificationCodeByEmail(correoSaneado, codigoSaneado);
       
       if (!codigoValido) {
         return res.status(401).json({
@@ -88,8 +140,8 @@ const LoginController = {
         });
       }
 
-      // Obtener datos completos del usuario
-      const usuario = await LoginModel.findByEmail(correo);
+      // Obtener datos del usuario
+      const usuario = await LoginModel.findByEmail(correoSaneado);
       
       if (!usuario) {
         return res.status(404).json({
@@ -128,11 +180,9 @@ const LoginController = {
     }
   },
 
-  // ✅ FUNCIÓN VERIFICAR TOKEN AGREGADA
+  // ✅ FUNCIÓN VERIFICAR TOKEN
   async verificarToken(req, res) {
     try {
-      // El middleware ya verificó el token y agregó los datos a req.usuario
-      // Solo devolvemos la información del usuario
       res.json({
         success: true,
         usuario: {
