@@ -83,7 +83,36 @@ const changePassword = async (req, res) => {
     }
 };
 
+const hasLoggedInBefore = async (req, res) => {
+    try {
+        // Obtener token del header
+        const authHeader = req.headers.authorization || req.headers['x-access-token'] || '';
+        const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+
+        // Decodificar token
+        const decoded = await decodedToken(token);
+        if (!decoded || !decoded.id_usuario) {
+            return res.status(401).json({ message: 'Token inválido o no proporcionado' });
+        }
+
+        // Obtener cantidad de logins
+        const loginCount = await registerModel.getLoginCount(decoded.id_usuario);
+        
+        // Retornar true si tiene al menos un login, false en caso contrario
+        return res.status(200).json({
+            hasLoggedBefore: loginCount > 0
+        });
+
+    } catch (error) {
+        return res.status(500).json({ 
+            message: 'Error al verificar historial de inicio de sesión', 
+            error: error.message 
+        });
+    }
+};
+
 export const RegisterController = {
     register,
-    changePassword
+    changePassword,
+    hasLoggedInBefore
 };

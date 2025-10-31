@@ -48,8 +48,25 @@ const getUserById = async (id_usuario) => {
     return rows[0]; // Retorna el primer usuario encontrado
 };
 
+const getLoginCount = async (id_usuario) => {
+    const query = {
+        text: `
+            SELECT COUNT(*) as login_count
+            FROM logs 
+            WHERE id_usuario = $1 
+            AND tipo_log = 1
+        `,
+        values: [id_usuario]
+    };
+
+    const { rows } = await pool.query(query);
+    return parseInt(rows[0].login_count);
+};
+
+
 export const registerModel = {
     registerUser,
     updatePasswordById,
-    getUserById
+    getUserById,
+    getLoginCount
 };
