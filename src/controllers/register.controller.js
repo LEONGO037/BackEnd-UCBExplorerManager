@@ -100,7 +100,7 @@ const hasLoggedInBefore = async (req, res) => {
         
         // Retornar true si tiene al menos un login, false en caso contrario
         return res.status(200).json({
-            hasLoggedBefore: loginCount > 0
+            hasLoggedBefore: loginCount > 1
         });
 
     } catch (error) {
