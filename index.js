@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { port } from './config.js';
 import registerRouter from './src/routes/register.routes.js';
 import { setupSwagger } from './swagger.js';
+import loginRouter from './src/routes/login.routes.js';
 
 dotenv.config();
 
@@ -20,6 +21,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Rutas
 app.use('/user', registerRouter);
+
+app.use('/api/login', loginRouter);
 
 // Iniciar el servidor
 app.listen(port, () => {
