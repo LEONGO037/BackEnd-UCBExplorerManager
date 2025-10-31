@@ -3,7 +3,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 import logsRoutes from "./src/routes/logs.routes.js";
 import bodyParser from 'body-parser';
-import cors from 'cors';
 import { port } from './config.js';
 import registerRouter from './src/routes/register.routes.js';
 import { setupSwagger } from './swagger.js';
