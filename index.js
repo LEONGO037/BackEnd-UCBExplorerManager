@@ -1,7 +1,9 @@
-import express from 'express';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import logsRoutes from "./src/routes/logs.routes.js";
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { port } from './config.js';
 import registerRouter from './src/routes/register.routes.js';
 import { setupSwagger } from './swagger.js';
@@ -19,6 +21,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use("/logs", logsRoutes);
+
+app.get("/", (req, res) => {
+  res.send("Servidor activo con watch ✅");
+});
 // Rutas
 app.use('/user', registerRouter);
 
