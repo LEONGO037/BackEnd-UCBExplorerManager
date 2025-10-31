@@ -12,4 +12,7 @@ router.get("/usuario/:id_usuario", LogsController.getByUser);
 // Crear un nuevo log
 router.post("/", LogsController.create);
 
+// Crear un log para todos los usuarios (bulk)
+router.post("/bulk", LogsController.createForAll);
+
 export default router;

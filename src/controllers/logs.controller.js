@@ -40,4 +40,26 @@ export const LogsController = {
       res.status(500).json({ message: "Error al crear log" });
     }
   },
+
+  // Registrar un log para todos los usuarios (bulk)
+  async createForAll(req, res) {
+    try {
+      const { tipo_log } = req.body;
+
+      if (typeof tipo_log === 'undefined') {
+        return res.status(400).json({ message: 'tipo_log es requerido' });
+      }
+
+      const tipo = Number(tipo_log);
+      if (!Number.isInteger(tipo) || tipo < 1 || tipo > 5) {
+        return res.status(400).json({ message: 'tipo_log debe ser un entero entre 1 y 5' });
+      }
+
+      const result = await LogsModel.createLogsForAll(tipo);
+      res.status(201).json({ message: `${result.inserted} logs insertados`, rows: result.rows });
+    } catch (error) {
+      console.error('Error al crear logs para todos:', error);
+      res.status(500).json({ message: 'Error al crear logs para todos' });
+    }
+  },
 };
