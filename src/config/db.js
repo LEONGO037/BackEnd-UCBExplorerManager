@@ -11,5 +11,7 @@ export const pool = new Pool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: parseInt(process.env.DB_PORT),
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
+  // 🔥 Configurar zona horaria en las opciones de conexión
+  options: '-c timezone=America/La_Paz'
 });
