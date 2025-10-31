@@ -95,7 +95,7 @@ export const LogsModel = {
   async createLog({ id_usuario, tipo_log }) {
     const query = `
       -- Registrar fecha/hora en la zona horaria de La Paz, Bolivia
-      INSERT INTO logs (id_usuario, fechaHora, tipo_log)
+      INSERT INTO logs (id_usuario, fechahora, tipo_log)
       VALUES ($1, (NOW() AT TIME ZONE 'America/La_Paz'), $2)
       RETURNING *;
     `;
@@ -108,7 +108,7 @@ export const LogsModel = {
   async createLogsForAll(tipo_log) {
     const query = `
       -- Insertar fecha/hora usando la zona 'America/La_Paz' (La Paz, Bolivia)
-      INSERT INTO logs (id_usuario, fechaHora, tipo_log)
+      INSERT INTO logs (id_usuario, fechahora, tipo_log)
       SELECT id_usuario, (NOW() AT TIME ZONE 'America/La_Paz'), $1 FROM usuarios
       RETURNING *;
     `;
