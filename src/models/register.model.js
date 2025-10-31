@@ -34,7 +34,22 @@ const updatePasswordById = async (id_usuario, nuevaContraseniaHasheada) => {
     return rows[0];
 };
 
+const getUserById = async (id_usuario) => {
+    const query = {
+        text: `
+            SELECT id_usuario, nombre, apellido, correo, contrasenia, id_rol
+            FROM usuarios
+            WHERE id_usuario = $1
+        `,
+        values: [id_usuario]
+    };
+
+    const { rows } = await pool.query(query);
+    return rows[0]; // Retorna el primer usuario encontrado
+};
+
 export const registerModel = {
     registerUser,
-    updatePasswordById
+    updatePasswordById,
+    getUserById
 };
