@@ -1,9 +1,12 @@
-import pool from '../config/database.js';
+import {pool} from '../config/db.js';
 
 export const LoginModel = {
-  // Buscar usuario por correo
   async findByEmail(correo) {
+    let client;
     try {
+      console.log('🔍 Buscando usuario con correo:', correo);
+      client = await pool.connect();
+      
       const query = `
         SELECT 
           u.id_usuario,
@@ -16,18 +19,25 @@ export const LoginModel = {
         LEFT JOIN roles r ON u.id_rol = r.id_rol
         WHERE u.correo = $1
       `;
-      const result = await pool.query(query, [correo]);
+      
+      const result = await client.query(query, [correo]);
       return result.rows[0] || null;
+
     } catch (error) {
+      console.error('❌ ERROR en findByEmail:', error.message);
       throw new Error(`Error al buscar usuario: ${error.message}`);
+    } finally {
+      if (client) client.release();
     }
   },
 
-  // Guardar código de verificación
   async saveVerificationCode(userId, code) {
+    let client;
     try {
-      // Primero eliminamos cualquier código existente
-      await pool.query(
+      client = await pool.connect();
+      
+      // Primero eliminamos cualquier código existente para este usuario
+      await client.query(
         'DELETE FROM codigos_verificacion WHERE id_usuario = $1',
         [userId]
       );
@@ -37,15 +47,28 @@ export const LoginModel = {
         INSERT INTO codigos_verificacion (id_usuario, codigo, expiracion)
         VALUES ($1, $2, NOW() + INTERVAL '10 minutes')
       `;
-      await pool.query(query, [userId, code]);
+      await client.query(query, [userId, code]);
+      
     } catch (error) {
+      console.error('❌ ERROR en saveVerificationCode:', error.message);
       throw new Error(`Error al guardar código: ${error.message}`);
+    } finally {
+      if (client) client.release();
     }
   },
 
-  // Validar código de verificación
-  async validateVerificationCode(userId, code) {
+  async validateVerificationCodeByEmail(correo, codigo) {
+    let client;
     try {
+      client = await pool.connect();
+      
+      // Buscar el usuario por correo para obtener su ID
+      const usuario = await this.findByEmail(correo);
+      if (!usuario) {
+        return false;
+      }
+
+      // Validar el código usando el ID del usuario
       const query = `
         SELECT id_usuario 
         FROM codigos_verificacion 
@@ -54,28 +77,35 @@ export const LoginModel = {
         AND expiracion > NOW()
         AND usado = false
       `;
-      const result = await pool.query(query, [userId, code]);
+      const result = await client.query(query, [usuario.id_usuario, codigo]);
       
       if (result.rows.length > 0) {
         // Marcar el código como usado
-        await pool.query(
+        await client.query(
           'UPDATE codigos_verificacion SET usado = true WHERE id_usuario = $1 AND codigo = $2',
-          [userId, code]
+          [usuario.id_usuario, codigo]
         );
         return true;
       }
       return false;
     } catch (error) {
+      console.error('❌ ERROR en validateVerificationCodeByEmail:', error.message);
       throw new Error(`Error al validar código: ${error.message}`);
+    } finally {
+      if (client) client.release();
     }
   },
 
-  // Limpiar códigos expirados
+  // Función para limpiar códigos expirados
   async cleanExpiredCodes() {
+    let client;
     try {
-      await pool.query('DELETE FROM codigos_verificacion WHERE expiracion <= NOW()');
+      client = await pool.connect();
+      await client.query('DELETE FROM codigos_verificacion WHERE expiracion <= NOW()');
     } catch (error) {
       console.error('Error limpiando códigos expirados:', error);
+    } finally {
+      if (client) client.release();
     }
   }
 };
