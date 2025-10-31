@@ -63,10 +63,42 @@ const getLoginCount = async (id_usuario) => {
     return parseInt(rows[0].login_count);
 };
 
+const checkEmailExists = async (correo) => {
+    const query = {
+        text: `
+            SELECT EXISTS (
+                SELECT 1 
+                FROM usuarios 
+                WHERE correo = $1
+            ) as exists
+        `,
+        values: [correo]
+    };
+
+    const { rows } = await pool.query(query);
+    return rows[0].exists;
+};
+
+const getUserByEmail = async (correo) => {
+    const query = {
+        text: `
+            SELECT id_usuario, nombre, apellido, correo, contrasenia, id_rol
+            FROM usuarios
+            WHERE correo = $1
+        `,
+        values: [correo]
+    };
+
+    const { rows } = await pool.query(query);
+    return rows[0];
+};
+
 
 export const registerModel = {
     registerUser,
     updatePasswordById,
     getUserById,
-    getLoginCount
+    getLoginCount,
+    checkEmailExists,
+    getUserByEmail  // Añadimos la nueva función
 };

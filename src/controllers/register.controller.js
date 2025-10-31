@@ -1,5 +1,7 @@
 import bcrypt from 'bcrypt';
 import { registerModel } from '../models/register.model.js';
+import { sendEmail } from '../middlewares/sendEmail.js';
+import { LoginModel } from '../models/login.model.js';
 import { decodedToken } from '../middlewares/tokens.js';
 
 const register = async (req, res) => {
@@ -111,8 +113,69 @@ const hasLoggedInBefore = async (req, res) => {
     }
 };
 
+const verifyEmail = async (req, res) => {
+    try {
+        const { correo } = req.body;
+        console.log('Verificando correo:', correo);
+
+        if (!correo) {
+            return res.status(400).json({
+                success: false,
+                message: 'El correo es requerido'
+            });
+        }
+
+        // Verificar si el correo existe
+        const usuario = await registerModel.getUserByEmail(correo);
+        console.log('Usuario encontrado:', usuario);
+
+        if (!usuario) {
+            return res.status(404).json({
+                success: false,
+                message: 'Correo no registrado en el sistema'
+            });
+        }
+
+        // Generar código de verificación
+        const codigoVerificacion = Math.floor(100000 + Math.random() * 900000).toString();
+        console.log('Código generado:', codigoVerificacion);
+
+        // Enviar código por correo
+        await sendEmail({
+            to: correo,
+            subject: 'Código de verificación - Recuperación de contraseña',
+            text: `Tu código de verificación es: ${codigoVerificacion}\n\nEste código expirará en 10 minutos.`
+        });
+        console.log('Email enviado correctamente');
+
+        // Solo intentar guardar el código si LoginModel está disponible
+        if (LoginModel && typeof LoginModel.saveVerificationCode === 'function') {
+            await LoginModel.saveVerificationCode(usuario.id_usuario, codigoVerificacion);
+            console.log('Código guardado en base de datos');
+        } else {
+            console.warn('LoginModel.saveVerificationCode no está disponible');
+        }
+
+        // Enviar respuesta exitosa
+        return res.status(200).json({
+            success: true,
+            message: 'Código de verificación enviado al correo exitosamente',
+            correo: correo
+        });
+
+    } catch (error) {
+        console.error('Error completo:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error al procesar la solicitud',
+            error: error.message
+        });
+    }
+};
+
 export const RegisterController = {
     register,
     changePassword,
-    hasLoggedInBefore
+    hasLoggedInBefore,
+    verifyEmail  // Añadimos la nueva función
 };
