@@ -32,17 +32,15 @@ export const verificarRol = (rolesPermitidos) => (req, res, next) => {
 // Función para generar el token JWT
 export const generarToken = (usuario) => {
     const payload = {
-        id_cuenta: usuario.id_cuenta,
-        nombres: usuario.nombres,
-        apellidoPaterno: usuario.apellidoPaterno,
-        apellidoMaterno: usuario.apellidoMaterno,
-        nroDocumento: usuario.nroDocumento,
+        id_usuario: usuario.id_usuario,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
         correo: usuario.correo,
-        rol: usuario.rol,
-        usuario: usuario.usuario,
+        id_rol: usuario.id_rol,
+        rol: usuario.id_rol
     };
 
-    // Firmamos el token y lo devolvemos, con una duración de 1 hora
+    // Firmamos el token y lo devolvemos, con una duración de 10 horas
     return jwt.sign(payload, JWT_SECRET, { expiresIn: '10h' });
 };
 
@@ -70,13 +68,12 @@ export const decodedToken = async (token) => {
 
             const datosBasicos = decoded;  // Aquí usamos 'decoded' directamente
             const data = {
-                nroDocumento: datosBasicos.nroDocumento,
-                nombres: datosBasicos.nombres,
-                apellidoPaterno: datosBasicos.apellidoPaterno,
-                apellidoMaterno: datosBasicos.apellidoMaterno,
+                id_usuario: datosBasicos.id_usuario,
+                nombre: datosBasicos.nombre,
+                apellido: datosBasicos.apellido,
                 correo: datosBasicos.correo,
-                id_cuenta: datosBasicos.id_cuenta,
-                rol: datosBasicos.rol,
+                id_rol: datosBasicos.id_rol,
+                rol: datosBasicos.rol
             };
             resolve(data);
             console.log(data) // Resolver la promesa con los datos decodificados

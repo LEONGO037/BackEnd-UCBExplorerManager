@@ -1,9 +1,9 @@
 import pg from 'pg';
 
 export const pool = new pg.Pool({
-    user : "postgres.sinyhvhdeyagufbnsmqj",
-    host : "aws-0-sa-east-1.pooler.supabase.com",
-    password : "SisTGpassword2025",
-    database : "tallerdegrado",
-    port : "6543"
+    user : "postgres",
+    host : "db.bvmnizsvgblfelreghwj.supabase.co",
+    password : "Ucb-ExplorerManager",
+    database : "postgres",
+    port : "5432"
 })
