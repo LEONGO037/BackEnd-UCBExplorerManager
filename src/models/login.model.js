@@ -1,6 +1,85 @@
 import {pool} from '../config/db.js';
 
 export const LoginModel = {
+
+  async incrementarIntentosLogin(userId) {
+    let client;
+    try {
+      client = await pool.connect();
+      
+      // Incrementar contador de intentos de login
+      const updateQuery = `
+        UPDATE usuarios 
+        SET intentos_login = COALESCE(intentos_login, 0) + 1,
+            ultimo_intento_login = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'America/La_Paz')
+        WHERE id_usuario = $1
+        RETURNING intentos_login
+      `;
+      
+      const result = await client.query(updateQuery, [userId]);
+      const intentosActuales = result.rows[0].intentos_login;
+      
+      console.log(`📊 Intentos de login actualizados: ${intentosActuales} para usuario ${userId}`);
+      return intentosActuales;
+      
+    } catch (error) {
+      console.error('❌ ERROR en incrementarIntentosLogin:', error.message);
+      return 1; // Retorna 1 como fallback
+    } finally {
+      if (client) client.release();
+    }
+  },
+
+  async incrementarIntentosVerificacion(userId) {
+    let client;
+    try {
+      client = await pool.connect();
+      
+      // Incrementar contador de intentos de verificación
+      const updateQuery = `
+        UPDATE usuarios 
+        SET intentos_verificacion = COALESCE(intentos_verificacion, 0) + 1,
+            ultimo_intento_verificacion = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'America/La_Paz')
+        WHERE id_usuario = $1
+        RETURNING intentos_verificacion
+      `;
+      
+      const result = await client.query(updateQuery, [userId]);
+      const intentosActuales = result.rows[0].intentos_verificacion;
+      
+      console.log(`📊 Intentos de verificación actualizados: ${intentosActuales} para usuario ${userId}`);
+      return intentosActuales;
+      
+    } catch (error) {
+      console.error('❌ ERROR en incrementarIntentosVerificacion:', error.message);
+      return 1; // Retorna 1 como fallback
+    } finally {
+      if (client) client.release();
+    }
+  },
+
+  async resetIntentos(userId) {
+    let client;
+    try {
+      client = await pool.connect();
+      
+      // Resetear todos los contadores de intentos
+      const query = `
+        UPDATE usuarios 
+        SET intentos_login = 0,
+            intentos_verificacion = 0
+        WHERE id_usuario = $1
+      `;
+      
+      await client.query(query, [userId]);
+      console.log(`🔄 Contadores reseteados para usuario: ${userId}`);
+      
+    } catch (error) {
+      console.error('❌ ERROR en resetIntentos:', error.message);
+    } finally {
+      if (client) client.release();
+    }
+  },
   async findByEmail(correo) {
     let client;
     try {
