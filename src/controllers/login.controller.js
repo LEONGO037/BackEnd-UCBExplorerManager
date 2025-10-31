@@ -1,13 +1,15 @@
 import { LoginModel } from '../models/login.model.js';
 import { sendEmail } from '../middleware/sendEmail.js';
-import { generarToken } from '../middleware/tokens.js';
+import { generarToken, verificarToken } from '../middleware/tokens.js';
 import bcrypt from 'bcrypt';
 
-export const LoginController = {
+const LoginController = {
   // Paso 1: Solicitar inicio de sesión y enviar código
   async solicitarLogin(req, res) {
     try {
       const { correo, contrasenia } = req.body;
+
+      console.log('Datos recibidos:', req.body);
 
       if (!correo || !contrasenia) {
         return res.status(400).json({
@@ -26,7 +28,9 @@ export const LoginController = {
         });
       }
 
-      // Verificar contraseña (asumiendo que está hasheada)
+      console.log('Usuario encontrado:', usuario);
+
+      // Verificar contraseña
       const contraseniaValida = await bcrypt.compare(contrasenia, usuario.contrasenia);
       
       if (!contraseniaValida) {
@@ -36,7 +40,7 @@ export const LoginController = {
         });
       }
 
-      // Generar código de verificación (6 dígitos)
+      // Generar código de verificación
       const codigoVerificacion = Math.floor(100000 + Math.random() * 900000).toString();
 
       // Guardar código en la base de datos
@@ -48,9 +52,6 @@ export const LoginController = {
         subject: 'Código de verificación - Sistema de Gestión',
         text: `Tu código de verificación es: ${codigoVerificacion}\n\nEste código expirará en 10 minutos.`
       });
-
-      // Limpiar códigos expirados
-      await LoginModel.cleanExpiredCodes();
 
       res.json({
         success: true,
@@ -130,7 +131,7 @@ export const LoginController = {
     }
   },
 
-  // Verificar estado del token (opcional)
+  // Verificar estado del token
   async verificarToken(req, res) {
     try {
       // El middleware ya verificó el token, solo devolvemos la info
@@ -148,23 +149,4 @@ export const LoginController = {
   }
 };
 
-// Agregar método auxiliar al modelo
-LoginModel.findByUserId = async (userId) => {
-  try {
-    const query = `
-      SELECT 
-        u.id_usuario,
-        u.nombre,
-        u.correo,
-        u.id_rol,
-        r.nombre_rol as rol
-      FROM usuarios u
-      LEFT JOIN roles r ON u.id_rol = r.id_rol
-      WHERE u.id_usuario = $1
-    `;
-    const result = await pool.query(query, [userId]);
-    return result.rows[0] || null;
-  } catch (error) {
-    throw new Error(`Error al buscar usuario por ID: ${error.message}`);
-  }
-};
+export default LoginController;
