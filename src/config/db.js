@@ -1,9 +1,15 @@
-import pg from 'pg';
+import pkg from 'pg';
+import dotenv from 'dotenv';
 
-export const pool = new pg.Pool({
-    user : "postgres",
-    host : "db.bvmnizsvgblfelreghwj.supabase.co",
-    password : "Ucb-ExplorerManager",
-    database : "postgres",
-    port : "5432"
-})
+dotenv.config();
+
+const { Pool } = pkg;
+
+export const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: parseInt(process.env.DB_PORT),
+  ssl: { rejectUnauthorized: false }
+});
