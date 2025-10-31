@@ -55,7 +55,8 @@ export const generarToken = (usuario) => {
     id_rol: usuario.id_rol
   };
 
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '10h' });
+    // Firmamos el token y lo devolvemos, con una duración de 1 hora
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: '10h' });
 };
 
 export const decodedToken = async (token) => {
