@@ -60,7 +60,7 @@ const changePassword = async (req, res) => {
             return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres' });
         }
 
-        // Obtener usuario y verificar contraseña actual
+        //Obtener usuario y verificar contraseña actual
         const usuario = await registerModel.getUserById(id_usuario);
         if (!usuario) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
