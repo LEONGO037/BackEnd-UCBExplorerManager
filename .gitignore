@@ -1,4 +1,13 @@
-node_modules
-package-lock.json
-package.json
-pdf
+# Dependencias
+node_modules/
+
+# Archivos del sistema
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Opcional: lock file (solo si querés que cada entorno use versiones distintas)
+# package-lock.json

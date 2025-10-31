@@ -1,4 +1,4 @@
-import { pool } from '../db.js';
+import { pool } from '../config/db.js';
 
 const registerUser = async (nombre, apellido, correo, contrasenia, id_rol) => {
     const query = {
