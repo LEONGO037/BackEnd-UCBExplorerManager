@@ -93,6 +93,54 @@ const getUserByEmail = async (correo) => {
     return rows[0];
 };
 
+const saveRecuperationCode = async (userId, code) => {
+    let client;
+    try {
+      client = await pool.connect();
+      
+      await client.query(
+        'DELETE FROM codigos_verificacion WHERE id_usuario = $1',
+        [userId]
+      );
+
+      // Insertamos el nuevo código con expiración de 10 minutos en hora de La Paz
+      const query = `
+        INSERT INTO codigos_verificacion (id_usuario, codigo, expiracion)
+        VALUES ($1, $2, (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'America/La_Paz') + INTERVAL '10 minutes')
+      `;
+      await client.query(query, [userId, code]);
+      
+    } catch (error) {
+      console.error('❌ ERROR en saveVerificationCode:', error.message);
+      throw new Error(`Error al guardar código: ${error.message}`);
+    } finally {
+      if (client) client.release();
+    }
+  };
+
+const verifyRecuperationCode = async (userId, code) => {
+    const query = {
+        text: `
+            SELECT EXISTS (
+                SELECT 1 
+                FROM codigos_verificacion 
+                WHERE id_usuario = $1 
+                AND codigo = $2 
+                AND expiracion > (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'America/La_Paz')
+                AND usado = false
+            ) as is_valid
+        `,
+        values: [userId, code]
+    };
+
+    try {
+        const { rows } = await pool.query(query);
+        return rows[0].is_valid;
+    } catch (error) {
+        console.error('❌ ERROR en verifyRecuperationCode:', error.message);
+        throw new Error(`Error al verificar código: ${error.message}`);
+    }
+};
 
 export const registerModel = {
     registerUser,
@@ -100,5 +148,7 @@ export const registerModel = {
     getUserById,
     getLoginCount,
     checkEmailExists,
-    getUserByEmail  // Añadimos la nueva función
+    getUserByEmail,
+    saveRecuperationCode,
+    verifyRecuperationCode
 };

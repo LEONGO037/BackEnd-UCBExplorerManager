@@ -148,13 +148,7 @@ const verifyEmail = async (req, res) => {
         });
         console.log('Email enviado correctamente');
 
-        // Solo intentar guardar el código si LoginModel está disponible
-        if (LoginModel && typeof LoginModel.saveVerificationCode === 'function') {
-            await LoginModel.saveVerificationCode(usuario.id_usuario, codigoVerificacion);
-            console.log('Código guardado en base de datos');
-        } else {
-            console.warn('LoginModel.saveVerificationCode no está disponible');
-        }
+        await registerModel.saveRecuperationCode(usuario.id_usuario, codigoVerificacion);
 
         // Enviar respuesta exitosa
         return res.status(200).json({
@@ -173,9 +167,115 @@ const verifyEmail = async (req, res) => {
     }
 };
 
+const verifyCode = async (req, res) => {
+    try {
+        const { correo, codigo } = req.body;
+        console.log('Verificando código para:', correo);
+
+        if (!correo || !codigo) {
+            return res.status(400).json({
+                success: false,
+                message: 'El correo y el código son requeridos'
+            });
+        }
+
+        // Obtener usuario por correo
+        const usuario = await registerModel.getUserByEmail(correo);
+        if (!usuario) {
+            return res.status(404).json({
+                success: false,
+                message: 'Usuario no encontrado'
+            });
+        }
+
+        // Verificar si el código es válido
+        const isValid = await registerModel.verifyRecuperationCode(usuario.id_usuario, codigo);
+        if (!isValid) {
+            return res.status(400).json({
+                success: false,
+                message: 'Código inválido o expirado'
+            });
+        }
+
+        // Si el código es válido, devolver datos del usuario
+        return res.status(200).json({
+            success: true,
+            message: 'Código verificado correctamente',
+            usuario: {
+                id_usuario: usuario.id_usuario,
+                correo: usuario.correo
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en verifyCode:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error al verificar el código',
+            error: error.message
+        });
+    }
+};
+
+const updatePasswordByEmail = async (req, res) => {
+    try {
+        const { correo, nueva_contrasenia } = req.body;
+
+        if (!correo || !nueva_contrasenia) {
+            return res.status(400).json({
+                success: false,
+                message: 'El correo y la nueva contraseña son requeridos'
+            });
+        }
+
+        // Validar longitud mínima de la contraseña
+        if (nueva_contrasenia.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'La nueva contraseña debe tener al menos 6 caracteres'
+            });
+        }
+
+        // Obtener usuario por correo
+        const usuario = await registerModel.getUserByEmail(correo);
+        if (!usuario) {
+            return res.status(404).json({
+                success: false,
+                message: 'Usuario no encontrado'
+            });
+        }
+
+        // Hashear la nueva contraseña
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(nueva_contrasenia, salt);
+
+        // Actualizar la contraseña
+        const updated = await registerModel.updatePasswordById(usuario.id_usuario, hashedPassword);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Contraseña actualizada correctamente',
+            usuario: {
+                id_usuario: updated.id_usuario,
+                correo: updated.correo
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en updatePasswordByEmail:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error al actualizar la contraseña',
+            error: error.message
+        });
+    }
+};
+
 export const RegisterController = {
     register,
     changePassword,
     hasLoggedInBefore,
-    verifyEmail  // Añadimos la nueva función
+    verifyEmail,
+    verifyCode,
+    updatePasswordByEmail
 };
