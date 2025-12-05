@@ -11,6 +11,7 @@ import { port } from './config.js';
 import registerRouter from './src/routes/register.routes.js';
 import { setupSwagger } from './swagger.js';
 import loginRouter from './src/routes/login.routes.js';
+import dashboardRoutes from './src/routes/dashboard.routes.js';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/colegios', colegiosRoutes);
 app.use('/guias', guiasRoutes);
 app.use('/visits', visitsRoutes);
 app.use('/estudiantes', estudiantesRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 app.get("/", (req, res) => {
   res.send("Servidor activo con watch ✅");
